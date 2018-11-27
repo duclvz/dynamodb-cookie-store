@@ -4,7 +4,7 @@ Another NoSQL DynamoDB store for tough-cookie module.
 
 ## Installation
 ``` sh
-$ npm install dynamodb-cookie-store
+$ npm install dynamodb-cookie-store --save
 ```
 
 ## Usage
@@ -23,16 +23,34 @@ AWS.config.update({
   secretAccessKey: 'SecretAccessKey'
 });
 
-// Please create Table `cookie` first to use this package!
+// Define an instance Store based on `key` property
+var docClient = new AWS.DynamoDB.DocumentClient(); // client for DynamoDB
+// DynamoDBCookieStore use the key `key` to manage cookie
+var store = new DynamoDBCookieStore(docClient, 'example'); // key = 'example'
+var jar = new CookieJar(store);
+
+// By default DynamoDBCookieStore will use `cookie` table if not provide as third argument (tableName)
+var store = new DynamoDBCookieStore(docClient, 'example', 'store'); // tableName = 'store'
+// make sure your DynamoDB have that table named `store` to working properly
+
+/* request example */
+var request = require('request');
+request = request.defaults({ jar : jar });
+request('http://www.google.com', function() {
+  request('http://images.google.com')
+})
+
+// Please create a Table `cookie` or whatever name you want to use this package!
+// Remember that table should use the Primary partition key named as `key`
 // Example createTable by JS code or you can do this by Create Table GUI on DynamoDB Web Console
 var DynamoDB = new AWS.DynamoDB();
 DynamoDB.createTable({
   TableName: "cookie",
   KeySchema: [
-    { AttributeName: "email", KeyType: "HASH" }
+    { AttributeName: "key", KeyType: "HASH" }
   ],
   AttributeDefinitions: [
-    { AttributeName: "email", AttributeType: "S" }
+    { AttributeName: "key", AttributeType: "S" }
   ],
   ProvisionedThroughput: {
     ReadCapacityUnits: 5,
@@ -47,18 +65,6 @@ DynamoDB.createTable({
   }
 })
 
-// Define one instance Store based on email property
-var docClient = new AWS.DynamoDB.DocumentClient(); // client for DynamoDB
- // DynamoDBCookieStore use the key `email` to manage cookie
-var store = new DynamoDBCookieStore('example@gmail.com', docClient);
-var jar = new CookieJar(store);
-
-/* request example */
-var request = require('request');
-request = request.defaults({ jar : jar });
-request('http://www.google.com', function() {
-  request('http://images.google.com')
-})
 ```
 
 ## License

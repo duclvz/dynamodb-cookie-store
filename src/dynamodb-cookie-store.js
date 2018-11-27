@@ -6,11 +6,12 @@ var permutePath = tough.permutePath;
 var util = require('util');
 var AWS = require('aws-sdk');
 
-function DynamoDBCookieStore(email, DynamoDBClient) {
+function DynamoDBCookieStore(DynamoDBClient, key, tableName) {
   if (!(DynamoDBClient instanceof AWS.DynamoDB.DocumentClient))
     throw new Error('Invalid DynamoDB DocumentClient')
   Store.call(this);
-  this.email = email;
+  this.key = key;
+  this.tableName = tableName ? tableName : 'cookie';
   this.idx = {}; // idx is memory cache
   this.DynamoDBClient = DynamoDBClient;
   const self = this;
@@ -38,13 +39,13 @@ if (util.inspect.custom) {
 DynamoDBCookieStore.prototype._get = function (cb) {
   const self = this;
   self.DynamoDBClient.get({
-    TableName: 'cookie',
+    TableName: self.tableName,
     Key: {
-      email: self.email
+      key: self.key
     }
   }, function (err, data) {
-    if (err && err.statusCode == 400) 
-      throw new Error('Please create table "cookie" in DynamoDB to use this package!')
+    if (err)
+      throw err;
     if (!data.Item)
       return cb(err, data)
     for (var domainName in data.Item.cookie) {
@@ -62,9 +63,9 @@ DynamoDBCookieStore.prototype._put = function (cookie, cb) {
   const self = this;
   var cookieJSON = JSON.parse(JSON.stringify(cookie));
   self.DynamoDBClient.put({
-    TableName: 'cookie',
+    TableName: self.tableName,
     Item: {
-      email: self.email,
+      key: self.key,
       cookie: cookieJSON
     }
   }, cb);
